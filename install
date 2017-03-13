@@ -22,7 +22,7 @@ abs_dirname() {
 install() {
   if [[ "$1" == "-h" ]]; then
     cat >&2 <<USAGE
-Install gdub (gw).
+Install mdub (mw).
 usage: $0 <prefix>
   e.g. $0 /usr/local
 USAGE
@@ -30,12 +30,12 @@ USAGE
   fi
 
   local PREFIX="${1:-/usr/local}"
-  local GW_ROOT="$(abs_dirname "$0")"
+  local MW_ROOT="$(abs_dirname "$0")"
 
   mkdir -p "${PREFIX}/bin"
-  cp -R "${GW_ROOT}/bin/gw" "${PREFIX}/bin"
+  cp -R "${MW_ROOT}/bin/mw" "${PREFIX}/bin"
 
-  echo "Installed gdub (gw) to $PREFIX/bin/gw."
+  echo "Installed mdub (mw) to $PREFIX/bin/mw."
 }
 
 install "$@"

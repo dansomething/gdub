@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+# DEFAULTS may be overridden by calling environment.
+MVN="${MVN:-mvn}"
+MVNW="${MVNW:-mvnw}"
+MVN_POMFILE="${MVN_POMFILE:-pom.xml}"
+
+err() {
+  echo -e "${@}" >&2
+}
+
+lookup() {
+  local file="${1}"
+  local curr_path="${2}"
+  [[ -z "${curr_path}" ]] && curr_path="${PWD}"
+
+  # Search recursively upwards for file.
+  until [[ "${curr_path}" == "/" ]]; do
+    if [[ -e "${curr_path}/${file}" ]]; then
+      echo "${curr_path}/${file}"
+      break
+    else
+      curr_path=$(dirname "${curr_path}")
+    fi
+  done
+}
+
+select_mvn() {
+  local dir="${1}"
+
+  # Use project's mvnw if found.
+  local mvnw=$(lookup "${MVNW}" "${dir}")
+  if [[ -z "${mvnw}" ]]; then
+    err "No ${MVNW} set up for this project; consider setting one up:"
+    err "https://github.com/takari/takari-maven-plugin\n"
+  else
+    echo "${mvnw}"
+    return 0
+  fi
+
+  # Deal with a missing wrapper by defaulting to system mvn.
+  local mvn=$(which "${MVN}" 2>/dev/null)
+  if [[ -z ${mvn} ]]; then
+    err "'${MVN}' not installed or not available in your PATH:"
+    err "${PATH}"
+  else
+    echo "${mvn}"
+    return 0
+  fi
+
+  return 1
+}
+
+execute_mvn() {
+  local pom_xml=$(lookup "${MVN_POMFILE}")
+  local mvn=$(select_mvn "${working_dir}")
+  local build_args=( ${BUILD_ARG} "$@" )
+
+  if [[ -n "${pom_xml}" ]]; then
+    # We got a good build file, start mvnw there.
+    cd "$(dirname "${pom_xml}")"
+  else
+    err "Unable to find a mvn build file named ${MVN_POMFILE}."
+  fi
+
+  # Say what we are gonna do, then do it.
+  err "Using mvn at '${mvn}' to run POM '${pom_xml}':\n"
+  if [[ -n "build_args[@]" ]]; then
+    "${mvn}" "${build_args[@]}"
+  else
+    "${mvn}"
+  fi
+}
+
+# gw may be sourced from other scripts as a library to select / run mvn(w).
+if [[ ${BASH_SOURCE[0]} != $0 ]]; then
+  export -f execute_mvn select_mvn lookup err
+else
+  set -e
+  execute_mvn "$@"
+  exit $?
+fi
